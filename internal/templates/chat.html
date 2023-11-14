@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Go WebSocket Tutorial</title>
+  </head>
+  <body>
+
+    <h2>Пользователь: {{.UserName}}</h2>
+    <!-- Скрываем со страницы -->
+    <div id="user" class="o-hide">{{.UserId}}</div>
+    <div id="chat" class="o-hide">{{.RoomId}}</div>
+
+    <h2>Сообщения в чате: {{.RoomName}}</h2>
+    
+    <!-- форма сообщений -->
+    <form name="publish">
+        <input type="text" name="message">
+        <input type="submit" value="Отправить">
+    </form>
+  
+  <!-- div с сообщениями -->
+  <div id="messages"></div>
+
+    <script>
+        // Получаем значения элементов для передачи их в запросе
+        var a = document.getElementById('user').innerHTML;
+        var b = document.getElementById('chat').innerHTML;
+        console.log(a)
+        console.log(b)
+        let socket = new WebSocket('ws://127.0.0.1:8080/ws' + '?userId='+ a + '&roomId='+ b);
+
+        // При нажатии на кнопку "Отправить" в форме
+        document.forms.publish.onsubmit = function() {
+        // Получаем сообщение из поля
+        let outgoingMessage = this.message.value;
+        // Отправляем сообщение по WebSocket
+        socket.send(outgoingMessage);
+        // Обнуляем поле ввода
+        this.message.value = "";
+        return false;
+        };
+
+        // Получение сообщения JSON - отображение данных в div#messages
+        socket.onmessage = function(event) {
+        let message = event.data;
+        console.log(message)
+        // Парсим JSON
+        var msg = JSON.parse(message);
+
+        // Создаем новый элемент
+        let messageElem = document.createElement('div');
+        // Формируем смс
+        messageElem.textContent = msg.author + ": " + msg.msg;
+        // Добавляем его
+        document.getElementById('messages').append(messageElem);
+        }
+    </script>
+
+    <!-- <script>
+      let socket = new WebSocket("ws://127.0.0.1:8080/ws");
+      console.log("Attempting Connection...");
+
+      socket.onopen = () => {
+          console.log("Successfully Connected");
+          socket.send("Hi From the Client!")
+      };
+      
+      socket.onclose = event => {
+          console.log("Socket Closed Connection: ", event);
+          socket.send("Client Closed!")
+      };
+
+      socket.onerror = error => {
+          console.log("Socket Error: ", error);
+      };
+
+    </script> -->
+
+  </body>
+</html>
+
+<!-- Скрываем ID со страницы -->
+<style>
+  .o-hide {
+    display: none;
+    transition: all ease 0.8s;
+  }
+  </style>
