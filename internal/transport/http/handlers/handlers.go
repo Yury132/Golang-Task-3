@@ -300,6 +300,14 @@ func (h *Handler) GoChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Проверка на переход в уже удаленный чат
+	if _, chatExist := chatsHub[chatId]; !chatExist {
+		/// Переадресуем пользователя на ту же страницу
+		// Костыль userId == -1
+		http.Redirect(w, r, "/start?userId=-1&userName=xxx", http.StatusSeeOther)
+		return
+	}
+
 	// Получаем сессию
 	session, err := store.Get(r, "session-name")
 	if err != nil {
@@ -421,11 +429,29 @@ func (h *Handler) reader(conn *websocket.Conn, userId int, chatId int) {
 		if err != nil {
 			log.Println("Ошибка при чтении: ", err)
 
+			// Если в DeleteChat уже закрыли все подключения тут необходимо проверять, закрыто ли оно... чтобы повторно не вызывать err = conn.Close()
+			// Проверяем тип ошибки
+			// if err, ok := err.(*websocket.CloseError); ok {
+			// 	log.Printf("connection closed, code: %d, text: %q", err.Code, err.Text)
+			// 	break
+			// }
+
+			// Или так
+			// if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+			// 	log.Printf("WWWWWWWerror: %v", err)
+			// }
+
 			err = conn.Close()
 			if err != nil {
 				log.Println("Ошибка при закрытии соединения: ", err)
 				return
 			}
+
+			// Проверка на существование чата (вдруг кто-то удалил)
+			if _, chatExist := chatsHub[chatId]; !chatExist {
+				return
+			}
+
 			// Вычисляем индекс удаляемого подключения из чата
 			indexConn := utils.IndexOfConn(conn, chatsHub[chatId].Ws)
 			// Удаляем подключение из массива по индексу
@@ -434,7 +460,7 @@ func (h *Handler) reader(conn *websocket.Conn, userId int, chatId int) {
 
 			// Вычисляем индекс удаляемого пользователя из чата
 			indexUser := utils.IndexOfUser(usersHub[userId], chatsHub[chatId].User)
-			// Удаляем подключение из чата по индексу
+			// Удаляем пользователя из чата по индексу
 			chatsHub[chatId].User = append(chatsHub[chatId].User[:indexUser], chatsHub[chatId].User[indexUser+1:]...)
 			fmt.Println("Удалили одного пользователя из чата")
 
@@ -493,6 +519,36 @@ func (h *Handler) reader(conn *websocket.Conn, userId int, chatId int) {
 	}
 }
 
+// Удаление конкретного чата
+func (h *Handler) DeleteChat(w http.ResponseWriter, r *http.Request) {
+
+	vars := mux.Vars(r)
+
+	// ID чата
+	chatId, err := strconv.Atoi(vars["chatId"])
+	if err != nil || chatId < 1 {
+		http.NotFound(w, r)
+		return
+	}
+
+	// // Необходимо закрыть все подключения в удаляемом чате
+	// for i, conn := range chatsHub[chatId].Ws {
+	// 	err = conn.Close()
+	// 	if err != nil {
+	// 		log.Println(i, " - Ошибка при закрытии соединения: ", err)
+	// 	}
+	// }
+
+	// Удаляем чат и комнату из карты
+	delete(chatsHub, chatId)
+	delete(roomsHub, chatId)
+
+	// Переадресуем пользователя на ту же страницу
+	// Костыль userId == -1
+	http.Redirect(w, r, "/start?userId=-1&userName=xxx", http.StatusSeeOther)
+
+}
+
 // Вывод всех чатов
 func (h *Handler) GetChats(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
@@ -544,6 +600,12 @@ func (h *Handler) Worker(id int, jobs <-chan *models.SendMessage) {
 	// Если данных нет в канале - блокировка
 	for j := range jobs {
 		fmt.Println("worker", id, "принял сообщение: ", j)
+
+		// Проверка на существование чата (вдруг кто-то удалил)
+		if _, chatExist := chatsHub[j.ChatId]; !chatExist {
+			continue //&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+		}
+
 		// Рассылка сообщения всем участникам чата
 		for i, conn := range chatsHub[j.ChatId].Ws {
 
@@ -567,4 +629,5 @@ func (h *Handler) Worker(id int, jobs <-chan *models.SendMessage) {
 		}
 		fmt.Println("worker", id, "разослал сообщение: ", j)
 	}
+
 }

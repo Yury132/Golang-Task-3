@@ -14,7 +14,7 @@
 
     {{range $key, $value := .}}
     <div>
-      <a href="/go-chat/{{$value.RoomId}}">{{$value.RoomName}}</a>
+      <a href="/go-chat/{{$value.RoomId}}">{{$value.RoomName}}</a> <a href="/delete-chat/{{$value.RoomId}}"> Удалить чат</a>
     </div>
     {{else}}
     <p>Нет чатов...</p>

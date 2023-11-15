@@ -57,6 +57,10 @@
         // Добавляем его
         document.getElementById('messages').append(messageElem);
         }
+        // При закрытии соединения
+        socket.onclose = event => {
+          console.log("Socket Closed Connection: ", event);
+        };
     </script>
 
     <!-- <script>
