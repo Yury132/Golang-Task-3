@@ -13,6 +13,13 @@
     <div id="user" class="o-hide">{{.UserId}}</div>
     <div id="chat" class="o-hide">{{.RoomId}}</div>
 
+    <form action="/edit-chat" method="post">
+      <input type="text" name="chatName">
+      <input type="text" class="o-hide" name="chatID" value="{{.RoomId}}">
+      <input type="text" class="o-hide" name="userID" value="{{.UserId}}">
+      <button>Изменить название чата</button>
+    </form>
+
     <h2>Сообщения в чате: {{.RoomName}}</h2>
     
     <!-- форма сообщений -->

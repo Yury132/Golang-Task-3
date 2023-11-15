@@ -32,6 +32,8 @@ func InitRoutes(h *handlers.Handler) *mux.Router {
 	r.HandleFunc("/go-chat/{chatId:[0-9]+}", h.GoChat)
 	// Удаление конкретного чата
 	r.HandleFunc("/delete-chat/{chatId:[0-9]+}", h.DeleteChat)
+	// Изменение названия чата
+	r.HandleFunc("/edit-chat", h.EditChat).Methods(http.MethodPost)
 	http.Handle("/", r)
 
 	return r

@@ -546,7 +546,71 @@ func (h *Handler) DeleteChat(w http.ResponseWriter, r *http.Request) {
 	// Переадресуем пользователя на ту же страницу
 	// Костыль userId == -1
 	http.Redirect(w, r, "/start?userId=-1&userName=xxx", http.StatusSeeOther)
+}
 
+// Изменение названия чата
+func (h *Handler) EditChat(w http.ResponseWriter, r *http.Request) {
+
+	// ID пользователя из формы POST запрос
+	getUserID, err := strconv.Atoi(r.FormValue("userID"))
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Println("failed to get getUserID from string")
+		http.Redirect(w, r, "/start?userId=-1&userName=xxx", http.StatusSeeOther)
+		return
+	}
+
+	// ID чата из формы POST запрос
+	getRoomID, err := strconv.Atoi(r.FormValue("chatID"))
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Println("failed to get getRoomID from string")
+		http.Redirect(w, r, "/start?userId=-1&userName=xxx", http.StatusSeeOther)
+		return
+	}
+
+	// Название чата из формы POST запрос
+	getRoomName := r.FormValue("chatName")
+	if getRoomName == "" {
+		fmt.Println("Название чата пустое")
+		// Переадресуем пользователя на ту же страницу
+		// Костыль userId == -1
+		http.Redirect(w, r, "/start?userId=-1&userName=xxx", http.StatusSeeOther)
+		return
+	}
+
+	// Проверка на существование чата (вдруг кто-то удалил)
+	if _, chatExist := chatsHub[getRoomID]; !chatExist {
+		http.Redirect(w, r, "/start?userId=-1&userName=xxx", http.StatusSeeOther)
+		return
+	}
+
+	// Готовим сообщение для отправки
+	msg := models.SendMessage{
+		Msg:         "Новое название чата - " + getRoomName,
+		Author:      usersHub[getUserID].UserName,
+		MessageType: 1,
+		ChatId:      getRoomID,
+	}
+
+	// Кодируем
+	b, err := json.Marshal(msg)
+	if err != nil {
+		fmt.Println("js message marshal err")
+		return
+	}
+
+	// Отправляем полученное сообщение в Nats----------------------------------------------------------------Nats--------------------------------
+	if _, err = h.js.Publish(context.Background(), "events.us.page_loaded", b); err != nil {
+		fmt.Println("failed to publish message", err)
+		return
+	}
+
+	// Изменяем название текущего чата (название комнаты) в карте
+	chatsHub[getRoomID].Room.RoomName = getRoomName
+
+	// Перезаходим в чат
+	http.Redirect(w, r, "/go-chat/"+strconv.Itoa(getRoomID), http.StatusSeeOther)
 }
 
 // Вывод всех чатов
