@@ -1,35 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <title>Go WebSocket Tutorial</title>
+    <!-- Обязательные метатеги -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+
+    <title>Чат</title>
   </head>
   <body>
 
-    <h2>Пользователь: {{.UserName}}</h2>
+    <h2 class="container-sm">Пользователь: {{.UserName}}</h2>
     <!-- Скрываем со страницы -->
     <div id="user" class="o-hide">{{.UserId}}</div>
     <div id="chat" class="o-hide">{{.RoomId}}</div>
 
-    <form action="/edit-chat" method="post">
+    <form class="container-sm" action="/edit-chat" method="post">
       <input type="text" name="chatName">
       <input type="text" class="o-hide" name="chatID" value="{{.RoomId}}">
       <input type="text" class="o-hide" name="userID" value="{{.UserId}}">
       <button>Изменить название чата</button>
     </form>
 
-    <h2>Сообщения в чате: {{.RoomName}}</h2>
+    <div class="container-sm">
+      <a href="/start?userId=-1&userName=xxx">Выйти из чата</a>
+    </div>
+
+    <h2 class="container-sm">Сообщения в чате: {{.RoomName}}</h2>
     
     <!-- форма сообщений -->
-    <form name="publish">
+    <form class="container-sm" name="publish">
         <input type="text" name="message">
         <input type="submit" value="Отправить">
     </form>
   
   <!-- div с сообщениями -->
-  <div id="messages"></div>
+  <div class="container-sm" id="messages"></div>
 
     <script>
         // Получаем значения элементов для передачи их в запросе
@@ -90,6 +98,9 @@
 
     </script> -->
 
+  <!-- Вариант 1: Bootstrap в связке с Popper -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+
   </body>
 </html>
 
@@ -99,4 +110,4 @@
     display: none;
     transition: all ease 0.8s;
   }
-  </style>
+</style>
