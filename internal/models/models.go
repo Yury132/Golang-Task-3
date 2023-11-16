@@ -22,7 +22,7 @@ type Content struct {
 
 // Вспомогательная структура - ID пользователя и комнаты для перехода в конкретный чат
 type UserAndRoomStruct struct {
-	UserId   int    `json:"user_id"`
+	UserId   string `json:"user_id"`
 	UserName string `json:"user_name"`
 	RoomId   int    `json:"room_id"`
 	RoomName string `json:"room_name"`
@@ -36,7 +36,7 @@ type RoomStruct struct {
 
 // Пользователь
 type UserStruct struct {
-	UserId   int    `json:"user_id"`
+	UserId   string `json:"user_id"`
 	UserName string `json:"user_name"`
 }
 

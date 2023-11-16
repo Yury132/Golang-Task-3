@@ -50,7 +50,7 @@ var upgrader = websocket.Upgrader{
 }
 
 // Hub всех пользователей
-var usersHub = make(map[int]*models.UserStruct, 0)
+var usersHub = make(map[string]*models.UserStruct, 0)
 
 // Hub всех комнат
 var roomsHub = make(map[int]*models.RoomStruct, 0)
@@ -96,6 +96,7 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Проверка существования пользователя в БД и его создание при необходимости
 	if err = h.service.HandleUser(r.Context(), info.Name, info.Email); err != nil {
 		h.log.Error().Err(err).Msg("filed to handle user")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -104,9 +105,9 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 
 	// Задаем жизнь сессии в секундах
 	// 10 мин
-	store.Options = &sessions.Options{
-		MaxAge: 60 * 10,
-	}
+	// store.Options = &sessions.Options{
+	// 	MaxAge: 60 * 10,
+	// }
 	// Создаем сессию
 	session, err := store.Get(r, "session-name")
 	if err != nil {
@@ -117,6 +118,8 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 	session.Values["authenticated"] = true
 	session.Values["Name"] = info.Name
 	session.Values["Email"] = info.Email
+	session.Values["ID"] = info.ID
+	fmt.Println(info.ID, "First!!!")
 	if err = session.Save(r, w); err != nil {
 		h.log.Error().Err(err).Msg("filed to save session")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -208,40 +211,74 @@ func (h *Handler) GetUsersList(w http.ResponseWriter, r *http.Request) {
 // Страница после прохождения авторизации
 func (h *Handler) Start(w http.ResponseWriter, r *http.Request) {
 
-	// ID пользователя
-	userId, err := strconv.Atoi(r.URL.Query().Get("userId"))
+	// ID и Name пользователя
+	var userId string
+	var userName string
+
+	// Получаем сессию
+	session, err := store.Get(r, "session-name")
 	if err != nil {
+		h.log.Error().Err(err).Msg("session failed")
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Println("failed to get id from string")
 		return
 	}
 
+	// Проверяем, что пользователь залогинен
+	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
+		// Если нет
+		tmpl, err := template.ParseFiles("./internal/templates/error.html")
+		w.WriteHeader(http.StatusUnauthorized)
+		if err != nil {
+			h.log.Error().Err(err).Msg("filed to show error page")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		tmpl.Execute(w, nil)
+		return
+	} else {
+		// Если да
+		// Читаем данные из сессии
+		userName = session.Values["Name"].(string)
+		fmt.Println("From Google", userName)
+		userId = session.Values["ID"].(string)
+		fmt.Println("From Google", userId)
+	}
+
+	// ID пользователя
+	// userId, err := strconv.Atoi(r.URL.Query().Get("userId"))
+	// if err != nil {
+	// 	w.WriteHeader(http.StatusInternalServerError)
+	// 	fmt.Println("failed to get id from string")
+	// 	return
+	// }
+
+	// Проверка на то, что данного пользователя не было в карте
 	_, userExist := usersHub[userId]
 
-	// Костыль и проверка на то, что данного пользователя не было в карте
-	if userId != -1 && !userExist {
+	// Если пользователя раньше не существовало
+	if !userExist {
 		// Создаем нового пользователя
-		newUser := &models.UserStruct{UserId: userId, UserName: r.URL.Query().Get("userName")}
+		newUser := &models.UserStruct{UserId: userId, UserName: userName}
 
 		// Добавляем нового пользователя в карту
 		// Ключ карты - уникальный ID пользователя
 		usersHub[userId] = newUser
 
-		// Создаем сессию
-		session, err := store.Get(r, "session-name")
-		if err != nil {
-			fmt.Println("session create failed")
-		}
+		// // Создаем сессию
+		// session, err := store.Get(r, "session-name")
+		// if err != nil {
+		// 	fmt.Println("session create failed")
+		// }
 
-		// Сохраняем данные пользователя
-		// Будем получать userId и userName из гугл авторизации!!!!!!!!!!!!!!!!!!!!!!!!!!!Следить чтобы не пересохранялись пустые значения......
-		session.Values["userId"] = r.URL.Query().Get("userId")
-		session.Values["userName"] = r.URL.Query().Get("userName")
-		if err = session.Save(r, w); err != nil {
-			fmt.Println("filed to save session")
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+		// // Сохраняем данные пользователя
+		// // Будем получать userId и userName из гугл авторизации!!!!!!!!!!!!!!!!!!!!!!!!!!!Следить чтобы не пересохранялись пустые значения......
+		// session.Values["userId"] = r.URL.Query().Get("userId")
+		// session.Values["userName"] = r.URL.Query().Get("userName")
+		// if err = session.Save(r, w); err != nil {
+		// 	fmt.Println("filed to save session")
+		// 	w.WriteHeader(http.StatusInternalServerError)
+		// 	return
+		// }
 	}
 
 	tmpl, err := template.ParseFiles("./internal/templates/start.html")
@@ -263,10 +300,10 @@ func (h *Handler) CreateChat(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Название чата пустое")
 		// Переадресуем пользователя на ту же страницу
 		// Костыль userId == -1
-		http.Redirect(w, r, "/start?userId=-1&userName=xxx", http.StatusSeeOther)
+		http.Redirect(w, r, "/start", http.StatusSeeOther)
 		return
 	}
-
+	// http.Redirect(w, r, "/start?userId=-1&userName=xxx", http.StatusSeeOther) &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// Создаем новую комнату
 	newRoom := &models.RoomStruct{RoomId: globalId, RoomName: getRoomName}
 
@@ -285,7 +322,7 @@ func (h *Handler) CreateChat(w http.ResponseWriter, r *http.Request) {
 
 	// Переадресуем пользователя на ту же страницу
 	// Костыль userId == -1
-	http.Redirect(w, r, "/start?userId=-1&userName=xxx", http.StatusSeeOther)
+	http.Redirect(w, r, "/start", http.StatusSeeOther)
 }
 
 // Переходим в конкретный чат
@@ -304,7 +341,7 @@ func (h *Handler) GoChat(w http.ResponseWriter, r *http.Request) {
 	if _, chatExist := chatsHub[chatId]; !chatExist {
 		/// Переадресуем пользователя на ту же страницу
 		// Костыль userId == -1
-		http.Redirect(w, r, "/start?userId=-1&userName=xxx", http.StatusSeeOther)
+		http.Redirect(w, r, "/start", http.StatusSeeOther)
 		return
 	}
 
@@ -317,21 +354,21 @@ func (h *Handler) GoChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Из сессии читаем ID пользователя
-	userIdString := session.Values["userId"].(string)
+	userId := session.Values["ID"].(string)
 	// Переводим в int
-	userIdInt, err := strconv.Atoi(userIdString)
-	if err != nil || userIdInt < 1 {
-		http.NotFound(w, r)
-		return
-	}
+	// userIdInt, err := strconv.Atoi(userIdString)
+	// if err != nil || userIdInt < 1 {
+	// 	http.NotFound(w, r)
+	// 	return
+	// }
 
-	fmt.Println("ID пользователя из Сессии: ", userIdInt)
+	fmt.Println("ID пользователя из Сессии: ", userId)
 
 	// Из сессии читаем Name пользователя
-	userName := session.Values["userName"].(string)
+	userName := session.Values["Name"].(string)
 
 	// Формируем структуру
-	data := models.UserAndRoomStruct{UserId: userIdInt, UserName: userName, RoomId: chatId, RoomName: chatsHub[chatId].Room.RoomName}
+	data := models.UserAndRoomStruct{UserId: userId, UserName: userName, RoomId: chatId, RoomName: chatsHub[chatId].Room.RoomName}
 
 	tmpl, err := template.ParseFiles("./internal/templates/chat.html")
 	if err != nil {
@@ -348,11 +385,13 @@ func (h *Handler) GoChat(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) WsEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	// ID пользователя
-	getUserId, err := strconv.Atoi(r.URL.Query().Get("userId"))
-	if err != nil || getUserId < 1 {
-		http.NotFound(w, r)
-		return
-	}
+	// getUserId, err := strconv.Atoi(r.URL.Query().Get("userId"))
+	// if err != nil || getUserId < 1 {
+	// 	http.NotFound(w, r)
+	// 	return
+	// }
+	getUserId := r.URL.Query().Get("userId")
+
 	// ID комнаты (чата)
 	getRoomId, err := strconv.Atoi(r.URL.Query().Get("roomId"))
 	if err != nil || getRoomId < 1 {
@@ -419,7 +458,7 @@ func (h *Handler) WsEndpoint(w http.ResponseWriter, r *http.Request) {
 // Передаем ID пользователя, ID комнаты (ID чата) - Уникальные данные для каждого клиента, чьи сообщения мы прослушиваем
 // Это и есть уникальные ключи к картам
 // Имеем соответствие *websocket.Conn с конкретными комнатми (чатами)
-func (h *Handler) reader(conn *websocket.Conn, userId int, chatId int) {
+func (h *Handler) reader(conn *websocket.Conn, userId string, chatId int) {
 	// Этот бесконечный цикл запускаетя для каждого клиента с открытым WebSocket подключением
 	for {
 		// Ждем сообщение от клиента
@@ -547,27 +586,29 @@ func (h *Handler) DeleteChat(w http.ResponseWriter, r *http.Request) {
 
 	// Переадресуем пользователя на ту же страницу
 	// Костыль userId == -1
-	http.Redirect(w, r, "/start?userId=-1&userName=xxx", http.StatusSeeOther)
+	http.Redirect(w, r, "/start", http.StatusSeeOther)
 }
 
 // Изменение названия чата
 func (h *Handler) EditChat(w http.ResponseWriter, r *http.Request) {
 
 	// ID пользователя из формы POST запрос
-	getUserID, err := strconv.Atoi(r.FormValue("userID"))
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Println("failed to get getUserID from string")
-		http.Redirect(w, r, "/start?userId=-1&userName=xxx", http.StatusSeeOther)
-		return
-	}
+	// getUserID, err := strconv.Atoi(r.FormValue("userID"))
+	// if err != nil {
+	// 	w.WriteHeader(http.StatusInternalServerError)
+	// 	fmt.Println("failed to get getUserID from string")
+	// 	http.Redirect(w, r, "/start", http.StatusSeeOther)
+	// 	return
+	// }
+
+	getUserID := r.FormValue("userID")
 
 	// ID чата из формы POST запрос
 	getRoomID, err := strconv.Atoi(r.FormValue("chatID"))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Println("failed to get getRoomID from string")
-		http.Redirect(w, r, "/start?userId=-1&userName=xxx", http.StatusSeeOther)
+		http.Redirect(w, r, "/start", http.StatusSeeOther)
 		return
 	}
 
@@ -577,13 +618,13 @@ func (h *Handler) EditChat(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Название чата пустое")
 		// Переадресуем пользователя на ту же страницу
 		// Костыль userId == -1
-		http.Redirect(w, r, "/start?userId=-1&userName=xxx", http.StatusSeeOther)
+		http.Redirect(w, r, "/start", http.StatusSeeOther)
 		return
 	}
 
 	// Проверка на существование чата (вдруг кто-то удалил)
 	if _, chatExist := chatsHub[getRoomID]; !chatExist {
-		http.Redirect(w, r, "/start?userId=-1&userName=xxx", http.StatusSeeOther)
+		http.Redirect(w, r, "/start", http.StatusSeeOther)
 		return
 	}
 
