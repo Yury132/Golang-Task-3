@@ -70,49 +70,33 @@ func main() {
 	oauthCfg := cfg.SetupConfig()
 	googleAPI := google.New(logger)
 
-	//-------------------------------------------------------Настройка Nats и канала для воркеров------------------------------
-	// Канал для воркеров
-	jobs := make(chan *models.SendMessage, 100)
+	//-------------------------------------------------------Настройка Nats------------------------------
 
-	// Адрес сервера nats
-	url := os.Getenv("NATS_URL")
-	if url == "" {
-		url = nats.DefaultURL
-	}
-
-	// Подключаемся к серверу
-	nc, err := nats.Connect(url)
+	// Подключение к Nats
+	nc, err := nats.Connect(cfg.NATS.URL)
 	if err != nil {
-		fmt.Println("Ошибка при Connect...")
+		logger.Fatal().Err(err).Msg("failed to connect to NATS")
 	}
-	defer nc.Drain()
+	defer func() {
+		if err = nc.Drain(); err != nil {
+			logger.Fatal().Err(err).Msg("failed to drain nats connection")
+		}
+	}()
 
 	// Создаем Jetstream
 	js, err := jetstream.New(nc)
 	if err != nil {
-		fmt.Println("Ошибка при jetstream.New...")
+		logger.Fatal().Err(err).Msg("failed to create new jetstream")
 	}
 
-	cfgJS := jetstream.StreamConfig{
-		Name: "EVENTS",
-		// Очередь
-		Retention: jetstream.WorkQueuePolicy,
-		Subjects:  []string{"events.>"},
-	}
-
-	// Создаем поток
-	stream, err := js.CreateStream(context.Background(), cfgJS)
+	// Создаем Consumer
+	cons, err := cfg.NewJS(context.Background(), js, logger)
 	if err != nil {
-		fmt.Println("Ошибка при js.CreateStream...")
+		logger.Fatal().Err(err).Msg("failed to create new Jetstream or Consumer")
 	}
 
-	// Создаем получателя
-	cons, err := stream.CreateOrUpdateConsumer(context.Background(), jetstream.ConsumerConfig{
-		Name: "processor-1",
-	})
-	if err != nil {
-		fmt.Println("Ошибка при stream.CreateOrUpdateConsumer...")
-	}
+	// Канал для воркеров
+	jobs := make(chan *models.SendMessage, 100)
 
 	// В горутине получатель беспрерывно ждет входящих сообщений
 	// При получении сообщений, передает задачи-данные-смс воркерам для последующей рассылки
@@ -139,7 +123,7 @@ func main() {
 			fmt.Println("Ошибка при Consume...")
 		}
 	}()
-	//-------------------------------------------------------Настройка Nats и канала для воркеров------------------------------
+	//-------------------------------------------------------Настройка Nats------------------------------
 
 	strg := storage.New(conn)
 	svc := service.New(logger, oauthCfg, googleAPI, strg)

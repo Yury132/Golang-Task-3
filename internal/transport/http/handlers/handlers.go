@@ -669,7 +669,7 @@ func (h *Handler) Worker(id int, jobs <-chan *models.SendMessage) {
 
 		// Проверка на существование чата (вдруг кто-то удалил)
 		if _, chatExist := chatsHub[j.ChatId]; !chatExist {
-			continue //&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+			continue
 		}
 
 		// Рассылка сообщения всем участникам чата

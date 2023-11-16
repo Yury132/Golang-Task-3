@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/nats-io/nats.go/jetstream"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/pkgerrors"
@@ -48,10 +50,14 @@ type Config struct {
 		ClientID     string `envconfig:"AUTH_CLIENT_ID"`
 		ClientSecret string `envconfig:"AUTH_CLIENT_SECRET"`
 	}
+
+	NATS struct {
+		URL string `envconfig:"NATS_URL" default:"nats://localhost:4222"`
+	}
 }
 
 func Parse() (*Config, error) {
-	var cfg = &Config{}
+	var cfg = new(Config)
 
 	// Загружаем в переменные окружения из .env
 	err := godotenv.Load(envFile)
@@ -112,4 +118,31 @@ func (cfg Config) SetupConfig() *oauth2.Config {
 		Endpoint: google.Endpoint,
 	}
 	return conf
+}
+
+// Создание jetstream.Consumer
+func (cfg Config) NewJS(ctx context.Context, js jetstream.JetStream, logger zerolog.Logger) (jetstream.Consumer, error) {
+
+	streamCfg := jetstream.StreamConfig{
+		Name:      "EVENTS",
+		Retention: jetstream.WorkQueuePolicy,
+		Subjects:  []string{"events.>"},
+	}
+
+	// Создаем поток
+	stream, err := js.CreateStream(ctx, streamCfg)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("failed to create new stream")
+	}
+
+	// Создаем получателя
+	cons, err := stream.CreateOrUpdateConsumer(ctx, jetstream.ConsumerConfig{
+		Name: "processor-1",
+	})
+
+	if err != nil {
+		logger.Fatal().Err(err).Msg("failed to create new consumer")
+	}
+
+	return cons, nil
 }
