@@ -12,31 +12,49 @@
   </head>
   <body>
 
-    <h2 class="container-sm">Пользователь: {{.UserName}}</h2>
+    <h2 class="container-sm mt-4 mb-3">Пользователь: {{.UserName}}</h2>
     <!-- Скрываем со страницы -->
     <div id="user" class="o-hide">{{.UserId}}</div>
     <div id="chat" class="o-hide">{{.RoomId}}</div>
 
-    <form class="container-sm" action="/edit-chat" method="post">
-      <input type="text" name="chatName">
-      <input type="text" class="o-hide" name="chatID" value="{{.RoomId}}">
-      <input type="text" class="o-hide" name="userID" value="{{.UserId}}">
-      <button>Изменить название чата</button>
-    </form>
 
+    <!-- Изменение названия чата -->
+    <p class="container-sm mb-3 mt-2">
+      <a class="btn btn-outline-warning" data-bs-toggle="collapse" href="#collapseExample" role="button">
+        Изменить название чата
+      </a>
+    </p>
+    <!-- Скрывающиеся элементы -->
+    <div class="collapse container-sm mb-3 mt-2" id="collapseExample">
+      <div class="card card-body">
+        <form class="container-sm mb-3 mt-2" action="/edit-chat" method="post">
+          <div class="mb-3">
+            <input type="text" name="chatName" class="form-control" value="{{.RoomName}}">
+            <input type="text" class="o-hide" name="chatID" value="{{.RoomId}}">
+            <input type="text" class="o-hide" name="userID" value="{{.UserId}}">
+          </div>
+          <button type="submit" class="btn btn-outline-success">Изменить</button>
+        </form>
+      </div>
+    </div>
+    
+    <!-- Выйти из чата -->
     <div class="container-sm">
-      <a href="/start?userId=-1&userName=xxx">Выйти из чата</a>
+      <a class="btn btn-outline-danger" href="/start?userId=-1&userName=xxx" role="button">Выйти из чата</a>
     </div>
 
-    <h2 class="container-sm">Сообщения в чате: {{.RoomName}}</h2>
-    
-    <!-- форма сообщений -->
-    <form class="container-sm" name="publish">
-        <input type="text" name="message">
-        <input type="submit" value="Отправить">
+
+    <h2 class="container-sm mb-3 mt-3">Сообщения в чате: {{.RoomName}}</h2>
+
+    <!-- Отправка сообщений в чат -->
+    <form class="container-sm mb-3 mt-2" name="publish">
+      <div class="mb-3">
+        <input type="text" name="message" class="form-control">
+      </div>
+      <button type="submit" class="btn btn-outline-success">Отправить</button>
     </form>
   
-  <!-- div с сообщениями -->
+  <!-- Вывод всех сообщений -->
   <div class="container-sm" id="messages"></div>
 
     <script>
@@ -68,15 +86,23 @@
         // Создаем новый элемент
         let messageElem = document.createElement('div');
         // Формируем смс
-        messageElem.textContent = msg.author + ": " + msg.msg;
+        //messageElem.textContent = msg.author + ": " + msg.msg;
+        //messageElem.innerHTML = '<h4>'+ msg.author + ": " + msg.msg +'</h4>';
+        //messageElem.innerHTML = '<div class="alert alert-secondary">'+ msg.author + ": " + msg.msg + '</div>';
+        messageElem.innerHTML = '<div class="card card-body">'+ msg.author + ": " + msg.msg + '</div>';
         // Добавляем его
-        document.getElementById('messages').append(messageElem);
+        //document.getElementById('messages').append(messageElem);
+        document.getElementById('messages').prepend(messageElem);
         }
         // При закрытии соединения
         socket.onclose = event => {
           console.log("Socket Closed Connection: ", event);
         };
     </script>
+
+
+
+
 
     <!-- <script>
       let socket = new WebSocket("ws://127.0.0.1:8080/ws");
@@ -98,7 +124,7 @@
 
     </script> -->
 
-  <!-- Вариант 1: Bootstrap в связке с Popper -->
+  <!-- Bootstrap в связке с Popper -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
 
   </body>

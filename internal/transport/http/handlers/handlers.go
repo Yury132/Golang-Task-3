@@ -531,6 +531,8 @@ func (h *Handler) DeleteChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Println("Удаляем чат", chatId)
+
 	// // Необходимо закрыть все подключения в удаляемом чате
 	// for i, conn := range chatsHub[chatId].Ws {
 	// 	err = conn.Close()
