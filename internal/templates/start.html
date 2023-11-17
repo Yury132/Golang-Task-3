@@ -41,9 +41,52 @@
     <p class="container-sm">Создайте первый чат!</p>
     {{end}}
 
+    <!-- Тест - Отправка POST запроса на сервер с получением данных JSON -->
+    <div class="container-sm mb-3 o-hide">
+      <button class="btn btn-outline-success" onclick="test()">Go</button>
+    </div>
+
+    <script>
+
+      // Отправка POST запроса на сервер с получением данных JSON
+      function test() {
+        fetch("http://localhost:8080/test", {
+          method: "POST",
+          body: JSON.stringify({
+            userId: 1,
+            title: "Fix my bugs",
+            completed: false
+          }),
+          headers: {
+            "Content-type": "application/json"
+          }
+        })
+        .then((response) => response.json())
+        .then((getData) => data2(getData));
+      }
+
+      // Выводим полученные данные
+      function data2(getData) {
+        console.log(getData);
+        console.log(getData.msg);
+        console.log(getData.author);
+        console.log(getData.messageType);
+        console.log(getData.chatId);
+      }
+
+    </script>
+
   
   <!-- Bootstrap в связке с Popper -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
 
   </body>
 </html>
+
+<!-- Скрываем со страницы -->
+<style>
+  .o-hide {
+    display: none;
+    transition: all ease 0.8s;
+  }
+</style>

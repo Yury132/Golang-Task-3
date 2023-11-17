@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -689,6 +690,57 @@ func (h *Handler) GetUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write(response)
+}
+
+// Тест - Получаем от клиента данные JSON и возвращаем JSON
+func (h *Handler) Test(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Читаем из Body
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		fmt.Println("1")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer r.Body.Close()
+
+	// Обработка данных в body
+	contentType := r.Header.Get("Content-Type")
+	switch contentType {
+	case "application/json":
+		// Обработка данных в формате JSON
+		fmt.Println("get json")
+		var data map[string]interface{}
+		err := json.Unmarshal(body, &data)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		fmt.Println(data["userId"])
+		fmt.Println(data["title"])
+		fmt.Println(data["completed"])
+	default:
+		// Обработка данных в другом формате
+		fmt.Println("not json")
+	}
+
+	// Готовим сообщение для отправки
+	msg := models.SendMessage{
+		Msg:         "Тестовое сообщение",
+		Author:      "alex",
+		MessageType: 99,
+		ChatId:      1,
+	}
+
+	// Кодируем
+	b, err := json.Marshal(msg)
+	if err != nil {
+		fmt.Println("js message marshal err")
+		return
+	}
+
+	w.Write(b)
 }
 
 func New(log zerolog.Logger, oauthConfig *oauth2.Config, service Service, js jetstream.JetStream) *Handler {

@@ -34,6 +34,8 @@ func InitRoutes(h *handlers.Handler) *mux.Router {
 	r.HandleFunc("/delete-chat/{chatId:[0-9]+}", h.DeleteChat)
 	// Изменение названия чата
 	r.HandleFunc("/edit-chat", h.EditChat).Methods(http.MethodPost)
+	// Тест - Получаем от клиента данные JSON и возвращаем JSON
+	r.HandleFunc("/test", h.Test).Methods(http.MethodPost)
 	http.Handle("/", r)
 
 	return r
