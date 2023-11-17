@@ -10,11 +10,11 @@
 
     <title>Чат</title>
   </head>
-  <body>
+  <body class="bg-dark text-white">
 
-  
     <h3 class="container-sm mt-4">Введите название чата</h3>
 
+    <!-- Создание чата -->
     <form class="container-sm mb-3" action="/create-chat" method="post">
       <div class="mb-3">
         <input type="text" name="chatName" class="form-control">
@@ -40,8 +40,6 @@
     {{else}}
     <p class="container-sm">Создайте первый чат!</p>
     {{end}}
-
-
 
   
   <!-- Bootstrap в связке с Popper -->
