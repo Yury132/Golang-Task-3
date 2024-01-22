@@ -66,8 +66,16 @@ http://localhost:8080/
 - Создать чат с любым названием
   
 ![alt text](https://github.com/Yury132/Golang-Task-3/blob/main/forREADME/1.PNG?raw=true)
+  
+![alt text](https://github.com/Yury132/Golang-Task-3/blob/main/forREADME/2.PNG?raw=true)
 
 - Авторизованным пользователям перейти в один и тот же чат и начать обмениваться сообщениями
+    
+![alt text](https://github.com/Yury132/Golang-Task-3/blob/main/forREADME/4.PNG?raw=true)
+
 - При необходимости название чата можно изменить
-- Существующие чата можно удалять, нажимая на крестик рядом с названием конкретного чата
+    
+![alt text](https://github.com/Yury132/Golang-Task-3/blob/main/forREADME/3.PNG?raw=true)
+
+- Существующие чаты можно удалять, нажимая на крестик рядом с названием конкретного чата
 
